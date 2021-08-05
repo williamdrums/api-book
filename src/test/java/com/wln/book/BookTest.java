@@ -11,13 +11,12 @@ import java.util.List;
 
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.apache.commons.lang3.RandomStringUtils.randomNumeric;
-//import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BookTest {
 
-    private static final String API_ROOT = "http://localhost:8081/api/books";
+    private static final String API_ROOT = "http://localhost:8080/api/books";
 
     private Book criarLivroAleatorio() {
         Book book = new Book();
@@ -54,7 +53,7 @@ public class BookTest {
     }
 
     @Test
-    public void quandoCriarLivroPorId_entaoOK() {
+    public void quandoCriarLivroPorId_entaoOk() {
         Book book = criarLivroAleatorio();
         String location = criarLivroPorUri(book);
         Response response = RestAssured.get(location);
@@ -64,9 +63,68 @@ public class BookTest {
     }
 
     @Test
-    public void quandoNaoExistirLivroPorId_entãoNaoEncontrado() {
+    public void quandoNaoExistirLivroPorId_entaoNaoEncontrado() {
         Response response = RestAssured.get(API_ROOT + "/" + randomNumeric(4));
 
         assertEquals(HttpStatus.NOT_FOUND.value(), response.getStatusCode());
     }
+
+    @Test
+    public void quandoCriarUmNovoLivro_entaoOk() {
+        Book book = criarLivroAleatorio();
+        Response response = RestAssured.given()
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(book)
+                .post(API_ROOT);
+
+        assertEquals(HttpStatus.CREATED.value(), response.getStatusCode());
+    }
+
+    @Test
+    public void quandoLivroInvalido_entaoErro() {
+        Book book = criarLivroAleatorio();
+        book.setAuthor(null);
+        Response response = RestAssured.given()
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(book)
+                .post(API_ROOT);
+
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCode());
+
+    }
+
+    @Test
+    public void quandoAtualizarLivro_entaoOk() {
+        Book book = criarLivroAleatorio();
+        String location = criarLivroPorUri(book);
+        book.setId(Long.parseLong(location.split("api/books/")[1]));
+        book.setAuthor("Novo Autor");
+
+        Response response = RestAssured.given()
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(book)
+                .put(location);
+
+        assertEquals(HttpStatus.OK.value(), response.getStatusCode());
+
+        response = RestAssured.get(location);
+
+        assertEquals(HttpStatus.OK.value(), response.getStatusCode());
+        assertEquals("Novo Autor", response.jsonPath()
+                .get("author"));
+    }
+
+    @Test
+    public void quandoDeletarLivro_entaoOk() {
+        Book book = criarLivroAleatorio();
+        String location = criarLivroPorUri(book);
+        Response response = RestAssured.delete(location);
+
+        assertEquals(HttpStatus.OK.value(), response.getStatusCode());
+
+        response = RestAssured.get(location);
+        assertEquals(HttpStatus.NOT_FOUND.value(),response.getStatusCode());
+    }
+
+
 }
